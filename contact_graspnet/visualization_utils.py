@@ -146,7 +146,9 @@ def visualize_grasps(
                 if gripper_openings is None
                 else gripper_openings[k]
             )
-            if len(pred_grasps_cam) > 1:
+            print(len(pred_grasps_cam))
+            if len(pred_grasps_cam) >= 1:
+                print("inside if pred")
                 draw_grasps(
                     pred_grasps_cam[k],
                     np.eye(4),
@@ -161,6 +163,7 @@ def visualize_grasps(
                     tube_radius=0.0025,
                 )
             else:
+                print("inside else pred")
                 colors3 = [cm2(0.5 * score)[:3] for score in scores[k]]
                 draw_grasps(
                     pred_grasps_cam[k],

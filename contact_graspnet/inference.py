@@ -12,6 +12,8 @@ import open3d as o3d
 
 # import matplotlib.pyplot as plt
 import argparse
+import socket
+
 
 # from pyrep import PyRep
 
@@ -46,6 +48,18 @@ from visualization_utils import visualize_grasps, show_image
 #         if fileToSearch in files:
 #             fullPath = os.path.join(rootDir, relPath, fileToSearch)
 #             print(fullPath)
+
+
+# Function to format numbers as strings without scientific notation
+def format_number(num):
+    return "{:.15f}".format(float(num))  # Convert to float before formatting
+
+
+def get_computer_name():
+    return socket.gethostname()
+
+
+computer_name = get_computer_name()
 
 
 def inference(
@@ -137,7 +151,12 @@ def inference(
         #     scores=scores,
         #     contact_pts=contact_pts,
         # )
-        csv_file_path = "/home/furkan/ros/noetic/repos/github.com/CardiffUniversityComputationalRobotics/hybridplanner-goal-regions/hybridplanner_common_bringup/src/grasping_points.csv"
+        computer_name = get_computer_name()
+        csv_file_path = (
+            "/home/"
+            + computer_name
+            + "/ros/noetic/repos/github.com/CardiffUniversityComputationalRobotics/hybridplanner-goal-regions/hybridplanner_common_bringup/src/grasping_points.csv"
+        )
         with open(csv_file_path, mode="w", newline="") as file:
             fieldnames = ["pred_grasps_cam", "scores", "contact_pts"]
             writer = csv.DictWriter(file, fieldnames=fieldnames)
@@ -145,8 +164,17 @@ def inference(
             for pred, score, contact in zip(
                 pred_grasps_cam[-1], scores[-1], contact_pts[-1]
             ):
+                formatted_pred = []
+                for pred_element in pred:
+                    formatted_pred.append([format_number(p) for p in pred_element])
+                formatted_score = format_number(score)
+
                 writer.writerow(
-                    {"pred_grasps_cam": pred, "scores": score, "contact_pts": contact},
+                    {
+                        "pred_grasps_cam": formatted_pred,
+                        "scores": formatted_score,
+                        "contact_pts": contact,
+                    },
                 )
 
         # Visualize results
