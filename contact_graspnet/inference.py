@@ -168,12 +168,13 @@ def inference(
                 for pred_element in pred:
                     formatted_pred.append([format_number(p) for p in pred_element])
                 formatted_score = format_number(score)
+                formatted_contact = [format_number(c) for c in contact]
 
                 writer.writerow(
                     {
                         "pred_grasps_cam": formatted_pred,
                         "scores": formatted_score,
-                        "contact_pts": contact,
+                        "contact_pts": formatted_contact,
                     },
                 )
 
