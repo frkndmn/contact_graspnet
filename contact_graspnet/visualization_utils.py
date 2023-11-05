@@ -124,7 +124,8 @@ def visualize_grasps(
     mlab.view(azimuth=180, elevation=180, distance=0.2)
     draw_pc_with_colors(full_pc, pc_colors)
     colors = [
-        cm(1.0 * i / len(pred_grasps_cam))[:3] for i in range(len(pred_grasps_cam))
+        cm(1.0 * i / len(pred_grasps_cam * 5))[:3]
+        for i in range(len(pred_grasps_cam) * 5)
     ]
     colors2 = {
         k: cm2(0.5 * np.max(scores[k]))[:3]
@@ -148,7 +149,6 @@ def visualize_grasps(
             )
             print(len(pred_grasps_cam))
             if len(pred_grasps_cam) >= 1:
-                print("inside if pred")
                 draw_grasps(
                     pred_grasps_cam[k],
                     np.eye(4),
@@ -163,7 +163,6 @@ def visualize_grasps(
                     tube_radius=0.0025,
                 )
             else:
-                print("inside else pred")
                 colors3 = [cm2(0.5 * score)[:3] for score in scores[k]]
                 draw_grasps(
                     pred_grasps_cam[k],

@@ -38,7 +38,7 @@ import config_utils
 from data import regularize_pc_point_count, depth2pc, load_available_input_data
 
 from contact_grasp_estimator import GraspEstimator
-from visualization_utils import visualize_grasps, show_image
+from visualization_interpolation import visualize_grasps, show_image
 
 
 # def coppeliasim():
@@ -154,9 +154,10 @@ def inference(
         computer_name = get_computer_name()
         csv_file_path = (
             "/home/"
-            + computer_name
+            + "furkan"
             + "/ros/noetic/repos/github.com/CardiffUniversityComputationalRobotics/hybridplanner-goal-regions/hybridplanner_common_bringup/src/grasping_points.csv"
         )
+
         with open(csv_file_path, mode="w", newline="") as file:
             fieldnames = ["pred_grasps_cam", "scores", "contact_pts"]
             writer = csv.DictWriter(file, fieldnames=fieldnames)
@@ -198,7 +199,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--np_path",
-        default="test_data/franka.npy",
+        default="test_data/franka_gazebo.npy",
         help='Input data: npz/npy file with keys either "depth" & camera matrix "K" or just point cloud "pc" in meters. Optionally, a 2D "segmap"',
     )
     parser.add_argument(
@@ -211,7 +212,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--z_range",
-        default=[0.2, 1.8],
+        default=[0.4, 1.2],
         help="Z value threshold to crop the input point cloud",
     )
     parser.add_argument(
@@ -235,7 +236,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--forward_passes",
         type=int,
-        default=1,
+        default=5,
         help="Run multiple parallel forward passes to mesh_utils more potential contact points.",
     )
     parser.add_argument(
