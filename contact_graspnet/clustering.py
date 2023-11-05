@@ -58,48 +58,25 @@ def quaternion_angular_distance(q1, q2):
     return angle
 
 
-def cluster_quaternions(orientations, positions, eps_degrees=60, min_samples=5):
+def cluster_quaternions(orientations, global_indices, eps_degrees=40, min_samples=5):
     distance_matrix = squareform(
         pdist(orientations, metric=quaternion_angular_distance)
     )
-
-    # Perform DBSCAN clustering with precomputed distances
     db = DBSCAN(
         eps=np.radians(eps_degrees), min_samples=min_samples, metric="precomputed"
     ).fit(distance_matrix)
     labels = db.labels_
-
     # Calculate the number of clusters, ignoring noise if present
     n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
     print("Estimated number of clusters of orientation:", n_clusters)
 
-    # Create a color map for clusters
-    colors = plt.cm.rainbow(np.linspace(0, 1, n_clusters))
-
-    # Plot the clusters in 3D
-    # fig = plt.figure()
-    # ax = fig.add_subplot(111, projection="3d")
-    for label, col in zip(set(labels), colors):
-        if label == -1:  # Black used for noise
-            col = [0, 0, 0, 1]
-        class_member_mask = labels == label
-        xyz = positions[class_member_mask]
-    #     ax.scatter(
-    #         xyz[:, 0],
-    #         xyz[:, 1],
-    #         xyz[:, 2],
-    #         c=[col],
-    #         marker="o",
-    #         label=f"Cluster {label}",
-    #     )
-    #
-    # # Set the limits of the plot
-    # ax.set_xlim([-0.5, 0.5])
-    # ax.set_ylim([-0.5, 0.5])
-    # ax.set_zlim([0, 1])
-    # ax.set_title(f"Estimated number of clusters: {n_clusters}")
-
-    return labels
+    cluster_indices = []
+    for index, label in enumerate(labels):
+        if label != -1:  # Check to make sure you're not looking at noise
+            cluster_indices.append((global_indices[index], label))
+        else:
+            cluster_indices.append((global_indices[index], None))
+    return cluster_indices
 
 
 def grasping_points_csv_to_dict(path="grasping_points.csv"):
@@ -151,11 +128,10 @@ def grasping_points_to_position_and_orientation(data) -> Tuple[np.ndarray, np.nd
     return positions, orientations
 
 
-def grasping_points_to_position_and_orientation_v2(
-    pred_grasps_cam,
-) -> Tuple[np.ndarray, np.ndarray]:
+def grasping_points_to_position_and_orientation_v2(pred_grasps_cam):
     positions = []
     orientations = []
+    matrices = []
 
     for i in pred_grasps_cam[-1]:
         x = i[0][3]
@@ -170,5 +146,6 @@ def grasping_points_to_position_and_orientation_v2(
         quaternion = euler_to_quaternion(yaw, pitch, roll)
         positions.append(position)
         orientations.append(quaternion)
+        matrices.append(i)
 
-    return positions, orientations
+    return positions, orientations, matrices

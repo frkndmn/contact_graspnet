@@ -8,7 +8,7 @@ import csv
 
 import cv2
 import math
-import open3d as o3d
+# import open3d as o3d
 
 # import matplotlib.pyplot as plt
 import argparse
@@ -151,36 +151,36 @@ def inference(
         #     scores=scores,
         #     contact_pts=contact_pts,
         # )
-        computer_name = get_computer_name()
-        csv_file_path = (
-            "/home/"
-            + "furkan"
-            + "/ros/noetic/repos/github.com/CardiffUniversityComputationalRobotics/hybridplanner-goal-regions/hybridplanner_common_bringup/src/grasping_points.csv"
-        )
-
-        with open(csv_file_path, mode="w", newline="") as file:
-            fieldnames = ["pred_grasps_cam", "scores", "contact_pts"]
-            writer = csv.DictWriter(file, fieldnames=fieldnames)
-            writer.writeheader()
-            for pred, score, contact in zip(
-                pred_grasps_cam[-1], scores[-1], contact_pts[-1]
-            ):
-                formatted_pred = []
-                for pred_element in pred:
-                    formatted_pred.append([format_number(p) for p in pred_element])
-                formatted_score = format_number(score)
-                formatted_contact = [format_number(c) for c in contact]
-
-                writer.writerow(
-                    {
-                        "pred_grasps_cam": formatted_pred,
-                        "scores": formatted_score,
-                        "contact_pts": formatted_contact,
-                    },
-                )
+        # computer_name = get_computer_name()
+        # csv_file_path = (
+        #     "/home/"
+        #     + "furkan"
+        #     + "/ros/noetic/repos/github.com/CardiffUniversityComputationalRobotics/hybridplanner-goal-regions/hybridplanner_common_bringup/src/grasping_points.csv"
+        # )
+        #
+        # with open(csv_file_path, mode="w", newline="") as file:
+        #     fieldnames = ["pred_grasps_cam", "scores", "contact_pts"]
+        #     writer = csv.DictWriter(file, fieldnames=fieldnames)
+        #     writer.writeheader()
+        #     for pred, score, contact in zip(
+        #         pred_grasps_cam[-1], scores[-1], contact_pts[-1]
+        #     ):
+        #         formatted_pred = []
+        #         for pred_element in pred:
+        #             formatted_pred.append([format_number(p) for p in pred_element])
+        #         formatted_score = format_number(score)
+        #         formatted_contact = [format_number(c) for c in contact]
+        #
+        #         writer.writerow(
+        #             {
+        #                 "pred_grasps_cam": formatted_pred,
+        #                 "scores": formatted_score,
+        #                 "contact_pts": formatted_contact,
+        #             },
+        #         )
 
         # Visualize results
-        show_image(rgb, segmap)
+        # show_image(rgb, segmap)
         visualize_grasps(
             pc_full, pred_grasps_cam, scores, plot_opencv_cam=True, pc_colors=pc_colors
         )
@@ -199,7 +199,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--np_path",
-        default="test_data/franka_gazebo.npy",
+        default="test_data/franka_gazebo_v2.npy",
         help='Input data: npz/npy file with keys either "depth" & camera matrix "K" or just point cloud "pc" in meters. Optionally, a 2D "segmap"',
     )
     parser.add_argument(

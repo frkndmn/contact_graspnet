@@ -6,6 +6,8 @@ from matplotlib import cm
 import mesh_utils
 
 from clustering import *
+from spline import generate_intermediate_poses
+from interpolation import draw_interpolation_line_v3, find_closest_point
 
 
 def plot_mesh(mesh, cam_trafo=np.eye(4), mesh_pose=np.eye(4)):
@@ -142,112 +144,118 @@ def visualize_grasps(
             np.eye(3, 3),
         )
 
-    positions, orientations = grasping_points_to_position_and_orientation_v2(
+    positions, orientations, matrices = grasping_points_to_position_and_orientation_v2(
         pred_grasps_cam
     )
-    X_pos = np.array(positions)
-    X_qua = np.array(orientations)
+    positions = np.array(positions)
 
-    db = DBSCAN(eps=0.05, min_samples=5).fit(X_pos)
+    db = DBSCAN(eps=0.05, min_samples=5).fit(positions)
     labels = db.labels_
     n_clusters_ = len(set(labels))
     print("Estimated number of clusters: %d" % n_clusters_)
 
-    clustered_positions = {i: [] for i in range(n_clusters_)}
-    clustered_orientation = {i: [] for i in range(n_clusters_)}
-
-    for point, label in zip(X_pos, labels):
-        if label != -1:
-            clustered_positions[label].append(point)
-
-    for point, label in zip(X_qua, labels):
-        if label != -1:
-            clustered_orientation[label].append(point)
-
-    ALL_POSITIONS = {}
-    all_index = []
-    last_index = 0
-    index = 0
-    for i in range(n_clusters_):
-        orientations_qua = np.array(clustered_orientation[i])
-        # orientations = quaternions_to_euler(qua_np)
-        positions = np.array(clustered_positions[i])
-        if not np.any(orientations_qua):
-            continue
-        labels_qua = cluster_quaternions(orientations_qua, positions)
-        global_indexes = {}
-        for label_idx in range(len(labels_qua)):
-            label = labels_qua[label_idx]
-            if label not in global_indexes:
-                global_index = last_index + label
-                global_indexes[label] = global_index
-                ALL_POSITIONS[global_index] = []
-            else:
-                global_index = global_indexes[label]
-            all_index.append(global_index)
-            ALL_POSITIONS[global_index].append(positions[label_idx])
-        last_index += max(list(global_indexes.keys())) + 1
-
     colors = [
-        (1, 0, 0),
-        (0, 1, 0),
-        (1, 0, 1),
-        (0, 1, 1),
-        (0, 0, 0),
-        (1, 1, 1),
-        (0.3, 0.4, 0.6),
-        (0.3, 0.4, 0.99),
-        (1, 1, 1),
-        (0.3, 0.4, 0.6),
-        (0.3, 0.4, 0.99),
-        (1, 1, 1),
-        (0.3, 0.4, 0.6),
-        (0.3, 0.4, 0.99),
+        (0.1, 0.2, 0.3),
+        (0.4, 0.5, 0.6),
+        (0.7, 0.8, 0.9),
+        (0.3, 0.1, 0.4),
+        (0.5, 0.2, 0.6),
+        (0.8, 0.3, 0.9),
+        (0.2, 0.4, 0.1),
+        (0.5, 0.6, 0.2),
+        (0.8, 0.9, 0.3),
+        (0.1, 0.3, 0.5),
+        (0.4, 0.2, 0.7),
+        (0.6, 0.1, 0.8),
+        (0.9, 0.4, 0.2),
+        (0.2, 0.7, 0.1),
+        (0.5, 0.9, 0.3)
     ]
-    all_index.extend(
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-    )
-    for i, k in enumerate(pred_grasps_cam):
-        for di, d in enumerate(pred_grasps_cam[k]):
-            ci = all_index[di]
-            color = colors[ci]
-            gripper_openings_k = np.ones(1) * gripper_width
+
+
+    global_labels = {}
+
+    indices = []
+    last_index = 0
+    scatter = False
+    for parent_cluster in range(n_clusters_):
+        cluster_positions_indices = []
+        cluster_orientations_indices = []
+        cluster_positions = []
+        cluster_orientations = []
+        for index, l in enumerate(labels):
+            if l == parent_cluster:
+                cluster_orientations.append(orientations[index])
+                cluster_orientations_indices.append(index)
+                cluster_positions.append(positions[index])
+                cluster_positions_indices.append(index)
+
+        if not np.any(cluster_orientations):
+            continue
+
+        sub_cluster_indices = cluster_quaternions(cluster_orientations, cluster_orientations_indices)
+
+        global_label = 0
+        for j, (matrices_index, sub_cluster) in enumerate(sub_cluster_indices):
+            if sub_cluster is None:
+                global_label = None
+            else:
+                global_label = global_labels.get(parent_cluster, {}).get(sub_cluster, None)
+                if global_label is None:
+                    global_label = last_index
+                    if parent_cluster not in global_labels:
+                        global_labels[parent_cluster] = {}
+                    global_labels[parent_cluster][sub_cluster] = global_label
+                    last_index += 1
+            indices.append((matrices_index, global_label))
+
+
+    # DRAW LINE
+    gripper_openings_k = np.ones(1) * gripper_width
+    for parent_cluster in global_labels:
+        for sub_cluster in global_labels[parent_cluster]:
+            label = global_labels[parent_cluster][sub_cluster]
+            sub_cluster_positions = [
+                positions[matrices_index]
+                for matrices_index, global_label in indices
+                if global_label == label
+            ]
+            if np.any(sub_cluster_positions):
+                line_start, line_end = draw_interpolation_line_v3(sub_cluster_positions)
+                # draw_line(line_start, line_end, color=colors[label])
+                ind_start = find_closest_point(positions, line_start)
+                ind_end = find_closest_point(positions, line_end)
+                interpolated = generate_intermediate_poses(
+                    positions[ind_start],
+                    orientations[ind_start],
+                    positions[ind_end],
+                    orientations[ind_end],
+                    50,
+                )
+                for interpolated_matrix in interpolated:
+                    draw_grasps(
+                        [interpolated_matrix],
+                        np.eye(4),
+                        color=colors[label],
+                        gripper_openings=gripper_openings_k,
+                    )
+
+    l_matrices = len(matrices)
+    l_indices = len(indices)
+    if l_matrices != l_indices:
+        print(f"Lengths are not equal, {l_matrices} != {l_indices}")
+
+    if scatter:
+        for global_index, color_index in indices:
+            if color_index is None:
+                continue
+            color = colors[color_index]
             draw_grasps(
-                [d],
+                [matrices[global_index]],
                 np.eye(4),
                 color=color,
                 gripper_openings=gripper_openings_k,
             )
-    # for i, k in enumerate(pred_grasps_cam):
-    #     if np.any(pred_grasps_cam[k]):
-    #         gripper_openings_k = (
-    #             np.ones(len(pred_grasps_cam[k])) * gripper_width
-    #             if gripper_openings is None
-    #             else gripper_openings[k]
-    #         )
-    #         print(len(pred_grasps_cam))
-    #         if len(pred_grasps_cam) >= 1:
-    #             draw_grasps(
-    #                 pred_grasps_cam[k],
-    #                 np.eye(4),
-    #                 color=colors[i],
-    #                 gripper_openings=gripper_openings_k,
-    #             )
-    #             draw_grasps(
-    #                 [pred_grasps_cam[k][np.argmax(scores[k])]],
-    #                 np.eye(4),
-    #                 color=colors2[k],
-    #                 gripper_openings=[gripper_openings_k[np.argmax(scores[k])]],
-    #                 tube_radius=0.0025,
-    #             )
-    #         else:
-    #             colors3 = [cm2(0.5 * score)[:3] for score in scores[k]]
-    #             draw_grasps(
-    #                 pred_grasps_cam[k],
-    #                 np.eye(4),
-    #                 colors=colors3,
-    #                 gripper_openings=gripper_openings_k,
-    #            )
     mlab.show()
 
 
@@ -391,3 +399,10 @@ def draw_grasps(
     src.update()
     lines = mlab.pipeline.tube(src, tube_radius=tube_radius, tube_sides=12)
     mlab.pipeline.surface(lines, color=color, opacity=1.0)
+
+
+def draw_line(line_start, line_end, color=(0, 0, 0)):
+    x = [line_start[0], line_end[0]]
+    y = [line_start[1], line_end[1]]
+    z = [line_start[2], line_end[2]]
+    mlab.plot3d(x, y, z, tube_radius=0.01, color=color)  # tube_radius=None for a 1D line
