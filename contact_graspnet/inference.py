@@ -8,6 +8,7 @@ import csv
 
 import cv2
 import math
+
 # import open3d as o3d
 
 # import matplotlib.pyplot as plt
@@ -199,7 +200,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--np_path",
-        default="test_data/franka_gazebo_v2.npy",
+        default="test_data/franka_gazebo.npy",
         help='Input data: npz/npy file with keys either "depth" & camera matrix "K" or just point cloud "pc" in meters. Optionally, a 2D "segmap"',
     )
     parser.add_argument(
@@ -212,7 +213,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--z_range",
-        default=[0.4, 1.2],
+        default=[0.4, 1],
         help="Z value threshold to crop the input point cloud",
     )
     parser.add_argument(

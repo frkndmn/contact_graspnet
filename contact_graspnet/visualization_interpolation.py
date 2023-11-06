@@ -149,7 +149,7 @@ def visualize_grasps(
     )
     positions = np.array(positions)
 
-    db = DBSCAN(eps=0.05, min_samples=5).fit(positions)
+    db = DBSCAN(eps=0.08, min_samples=5).fit(positions)
     labels = db.labels_
     n_clusters_ = len(set(labels))
     print("Estimated number of clusters: %d" % n_clusters_)
@@ -169,9 +169,8 @@ def visualize_grasps(
         (0.6, 0.1, 0.8),
         (0.9, 0.4, 0.2),
         (0.2, 0.7, 0.1),
-        (0.5, 0.9, 0.3)
+        (0.5, 0.9, 0.3),
     ]
-
 
     global_labels = {}
 
@@ -193,14 +192,18 @@ def visualize_grasps(
         if not np.any(cluster_orientations):
             continue
 
-        sub_cluster_indices = cluster_quaternions(cluster_orientations, cluster_orientations_indices)
+        sub_cluster_indices = cluster_quaternions(
+            cluster_orientations, cluster_orientations_indices
+        )
 
         global_label = 0
         for j, (matrices_index, sub_cluster) in enumerate(sub_cluster_indices):
             if sub_cluster is None:
                 global_label = None
             else:
-                global_label = global_labels.get(parent_cluster, {}).get(sub_cluster, None)
+                global_label = global_labels.get(parent_cluster, {}).get(
+                    sub_cluster, None
+                )
                 if global_label is None:
                     global_label = last_index
                     if parent_cluster not in global_labels:
@@ -208,7 +211,6 @@ def visualize_grasps(
                     global_labels[parent_cluster][sub_cluster] = global_label
                     last_index += 1
             indices.append((matrices_index, global_label))
-
 
     # DRAW LINE
     gripper_openings_k = np.ones(1) * gripper_width
@@ -405,4 +407,6 @@ def draw_line(line_start, line_end, color=(0, 0, 0)):
     x = [line_start[0], line_end[0]]
     y = [line_start[1], line_end[1]]
     z = [line_start[2], line_end[2]]
-    mlab.plot3d(x, y, z, tube_radius=0.01, color=color)  # tube_radius=None for a 1D line
+    mlab.plot3d(
+        x, y, z, tube_radius=0.01, color=color
+    )  # tube_radius=None for a 1D line

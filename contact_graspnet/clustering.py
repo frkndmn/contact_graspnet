@@ -58,7 +58,7 @@ def quaternion_angular_distance(q1, q2):
     return angle
 
 
-def cluster_quaternions(orientations, global_indices, eps_degrees=40, min_samples=5):
+def cluster_quaternions(orientations, global_indices, eps_degrees=45, min_samples=5):
     distance_matrix = squareform(
         pdist(orientations, metric=quaternion_angular_distance)
     )

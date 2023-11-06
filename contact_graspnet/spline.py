@@ -4,13 +4,17 @@ from math import sqrt
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 
+
 def calculate_distance(p1, p2):
     return sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2 + (p1[2] - p2[2]) ** 2)
 
 
 def n_closest_points_indices(points, target_point, n=3):
     # Calculate the distance from each point to the target point along with the index
-    distances = [(calculate_distance(point, target_point), index) for index, point in enumerate(points)]
+    distances = [
+        (calculate_distance(point, target_point), index)
+        for index, point in enumerate(points)
+    ]
 
     # Find the n smallest distances (no need to take the square root as we're only comparing distances)
     closest_indices = heapq.nsmallest(n, distances)
@@ -52,9 +56,14 @@ def generate_spline_edges(line, positions, orientations, n_close=3):
     edge_1_orientations = [orientations[i] for i in edge_1_position_indices]
     edge_2_orientations = [orientations[i] for i in edge_2_position_indices]
 
-    (edge_1_ori_idx, edge_2_ori_idx), (edge_1_ori, edge_2_ori) = find_most_different_orientation_couples(
-        edge_1_orientations, edge_1_position_indices,
-        edge_2_orientations, edge_2_position_indices,
+    (edge_1_ori_idx, edge_2_ori_idx), (
+        edge_1_ori,
+        edge_2_ori,
+    ) = find_most_different_orientation_couples(
+        edge_1_orientations,
+        edge_1_position_indices,
+        edge_2_orientations,
+        edge_2_position_indices,
     )
 
     return (
@@ -70,18 +79,21 @@ def lerp(position1, position2, t):
 
 # Define a function to interpolate between two quaternions using slerp
 def slerp(quat1, quat2, t):
+    quat1 = np.array(quat1)
+    quat2 = np.array(quat2)
+
     cos_theta = np.dot(quat1, quat2)
     # If the dot product is negative, the quaternions have opposite handed-ness and slerp won't take
     # the shorter path. Fix by reversing one quaternion.
     if cos_theta < 0.0:
-        quat1 = -quat1
+        quat1 = -quat1  # This operation is valid since quat1 is now a numpy array
         cos_theta = -cos_theta
     # Clamp the value to avoid numerical issues
     cos_theta = max(min(cos_theta, 1.0), -1.0)
 
     # If the quaternions are very close, lerp instead to avoid division by 0
     if cos_theta > 0.95:
-        return (1 - t) * np.array(quat1) + t * np.array(quat2)
+        return (1 - t) * quat1 + t * quat2
 
     # Compute the sin of the theta using trig identity
     theta = math.acos(cos_theta)
@@ -103,9 +115,7 @@ def generate_intermediate_poses(positions1, quaternions1, positions2, quaternion
     for t in t_values:
         new_position = lerp(positions1, positions2, t)
         new_orientation = slerp(quaternions1, quaternions2, t)
-        new_poses.append(
-            generate_matrix(new_position, new_orientation)
-        )
+        new_poses.append(generate_matrix(new_position, new_orientation))
 
     return new_poses
 
@@ -116,11 +126,13 @@ def generate_matrix(pos, ori):
     xy, xz, yz = x * y, x * z, y * z
     wx, wy, wz = w * x, w * y, w * z
 
-    rotation_matrix = np.array([
-        [1 - 2 * (yy + zz), 2 * (xy - wz), 2 * (xz + wy), pos[0]],
-        [2 * (xy + wz), 1 - 2 * (xx + zz), 2 * (yz - wx), pos[1]],
-        [2 * (xz - wy), 2 * (yz + wx), 1 - 2 * (xx + yy), pos[2]],
-        [0, 0, 0, 1]
-    ])
+    rotation_matrix = np.array(
+        [
+            [1 - 2 * (yy + zz), 2 * (xy - wz), 2 * (xz + wy), pos[0]],
+            [2 * (xy + wz), 1 - 2 * (xx + zz), 2 * (yz - wx), pos[1]],
+            [2 * (xz - wy), 2 * (yz + wx), 1 - 2 * (xx + yy), pos[2]],
+            [0, 0, 0, 1],
+        ]
+    )
 
     return rotation_matrix
