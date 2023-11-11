@@ -213,7 +213,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--z_range",
-        default=[0.4, 1],
+        default=[0.4, 1.2],
         help="Z value threshold to crop the input point cloud",
     )
     parser.add_argument(
