@@ -96,7 +96,7 @@ def visualize_grasps(
     full_pc,
     pred_grasps_cam,
     scores,
-    plot_opencv_cam=False,
+    plot_opencv_cam=True,
     pc_colors=None,
     gripper_openings=None,
     gripper_width=0.08,
@@ -124,8 +124,7 @@ def visualize_grasps(
     mlab.view(azimuth=180, elevation=180, distance=0.2)
     draw_pc_with_colors(full_pc, pc_colors)
     colors = [
-        cm(1.0 * i / len(pred_grasps_cam * 5))[:3]
-        for i in range(len(pred_grasps_cam) * 5)
+        cm(1.0 * i / len(pred_grasps_cam))[:3] for i in range(len(pred_grasps_cam))
     ]
     colors2 = {
         k: cm2(0.5 * np.max(scores[k]))[:3]
@@ -162,6 +161,7 @@ def visualize_grasps(
                     gripper_openings=[gripper_openings_k[np.argmax(scores[k])]],
                     tube_radius=0.0025,
                 )
+                print([pred_grasps_cam[k][np.argmax(scores[k])]])
             else:
                 colors3 = [cm2(0.5 * score)[:3] for score in scores[k]]
                 draw_grasps(
@@ -238,7 +238,7 @@ def draw_grasps(
     gripper_openings,
     color=(0, 1.0, 0),
     colors=None,
-    show_gripper_mesh=False,
+    show_gripper_mesh=True,
     tube_radius=0.0008,
 ):
     """
@@ -303,7 +303,14 @@ def draw_grasps(
             ).T
         )
         index += N
-        # mlab.plot3d(pts[:, 0], pts[:, 1], pts[:, 2], color=color, tube_radius=tube_radius, opacity=1.0)
+        mlab.plot3d(
+            pts[:, 0],
+            pts[:, 1],
+            pts[:, 2],
+            color=color,
+            tube_radius=tube_radius,
+            opacity=1.0,
+        )
 
     # speeds up plot3d because only one vtk object
     all_pts = np.vstack(all_pts)

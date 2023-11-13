@@ -1,13 +1,22 @@
-import numpy as np
 import mayavi.mlab as mlab
 import matplotlib.pyplot as plt
-from matplotlib import cm
+import numpy as np
 
 import mesh_utils
 
-from clustering import *
-from spline import generate_intermediate_poses
-from interpolation import draw_interpolation_line_v3, find_closest_point
+from agr_clustering import (
+    grasping_poses_to_position_and_orientation,
+    cluster_by_position,
+    generate_indices_array,
+)
+from agr_spline import generate_intermediate_poses
+from agr_interpolation import generate_interpolation_edges
+from agr_helper import (
+    COLORS,
+    closest_position_index,
+    save_interpolation_data,
+    quaternions_to_euler,
+)
 
 
 def plot_mesh(mesh, cam_trafo=np.eye(4), mesh_pose=np.eye(4)):
@@ -81,7 +90,6 @@ def show_image(rgb, segmap):
     """
     plt.figure()
     figManager = plt.get_current_fig_manager()
-    # figManager.window.showMaximized()
 
     plt.ion()
     plt.show()
@@ -120,144 +128,92 @@ def visualize_grasps(
         gripper_width {float} -- If gripper_openings is None, plot grasp widths (default: {0.008})
     """
 
-    print("Visualizing...takes time")
-    cm = plt.get_cmap("rainbow")
-    cm2 = plt.get_cmap("gist_rainbow")
+    print("Visualizing process started. It takes time.")
 
-    fig = mlab.figure("Pred Grasps")
+    fig = mlab.figure("Predicted Grasping Poses")
     mlab.view(azimuth=180, elevation=180, distance=0.2)
     draw_pc_with_colors(full_pc, pc_colors)
-    colors = [
-        cm(1.0 * i / len(pred_grasps_cam))[:3] for i in range(len(pred_grasps_cam))
-    ]
-    colors2 = {
-        k: cm2(0.5 * np.max(scores[k]))[:3]
-        for k in pred_grasps_cam
-        if np.any(pred_grasps_cam[k])
-    }
 
     if plot_opencv_cam:
         plot_coordinates(
-            np.zeros(
-                3,
-            ),
+            np.zeros(3,),
             np.eye(3, 3),
         )
 
-    positions, orientations, matrices = grasping_points_to_position_and_orientation_v2(
-        pred_grasps_cam
-    )
-    positions = np.array(positions)
+    #
+    # Adaptive Goal Region
+    #
 
-    db = DBSCAN(eps=0.08, min_samples=5).fit(positions)
-    labels = db.labels_
-    n_clusters_ = len(set(labels))
-    print("Estimated number of clusters: %d" % n_clusters_)
+    positions, orientations, matrices = grasping_poses_to_position_and_orientation(pred_grasps_cam)
 
-    colors = [
-        (0.1, 0.2, 0.3),
-        (0.4, 0.5, 0.6),
-        (0.7, 0.8, 0.9),
-        (0.3, 0.1, 0.4),
-        (0.5, 0.2, 0.6),
-        (0.8, 0.3, 0.9),
-        (0.2, 0.4, 0.1),
-        (0.5, 0.6, 0.2),
-        (0.8, 0.9, 0.3),
-        (0.1, 0.3, 0.5),
-        (0.4, 0.2, 0.7),
-        (0.6, 0.1, 0.8),
-        (0.9, 0.4, 0.2),
-        (0.2, 0.7, 0.1),
-        (0.5, 0.9, 0.3),
-    ]
+    # Cluster by Position
+    labels = cluster_by_position(positions)
+    n_clusters = len(set(labels))
+    print(f"Estimated number of clusters: {n_clusters}")
 
-    global_labels = {}
+    # Cluster by Orientation and Generate Unique Labels
+    indices, global_labels = generate_indices_array(labels, n_clusters, positions, orientations)
 
-    indices = []
-    last_index = 0
-    scatter = False
-    for parent_cluster in range(n_clusters_):
-        cluster_positions_indices = []
-        cluster_orientations_indices = []
-        cluster_positions = []
-        cluster_orientations = []
-        for index, l in enumerate(labels):
-            if l == parent_cluster:
-                cluster_orientations.append(orientations[index])
-                cluster_orientations_indices.append(index)
-                cluster_positions.append(positions[index])
-                cluster_positions_indices.append(index)
-
-        if not np.any(cluster_orientations):
-            continue
-
-        sub_cluster_indices = cluster_quaternions(
-            cluster_orientations, cluster_orientations_indices
-        )
-
-        global_label = 0
-        for j, (matrices_index, sub_cluster) in enumerate(sub_cluster_indices):
-            if sub_cluster is None:
-                global_label = None
-            else:
-                global_label = global_labels.get(parent_cluster, {}).get(
-                    sub_cluster, None
-                )
-                if global_label is None:
-                    global_label = last_index
-                    if parent_cluster not in global_labels:
-                        global_labels[parent_cluster] = {}
-                    global_labels[parent_cluster][sub_cluster] = global_label
-                    last_index += 1
-            indices.append((matrices_index, global_label))
-
-    # DRAW LINE
-    gripper_openings_k = np.ones(1) * gripper_width
+    # Draw Spline
+    adaptive_goal_region_data = []
+    gripper_openings_k = np.ones(1) * gripper_width  # constant
     for parent_cluster in global_labels:
         for sub_cluster in global_labels[parent_cluster]:
             label = global_labels[parent_cluster][sub_cluster]
-            sub_cluster_positions = [
+            sub_cluster_positions = np.array([
                 positions[matrices_index]
                 for matrices_index, global_label in indices
                 if global_label == label
-            ]
+            ])
             if np.any(sub_cluster_positions):
-                line_start, line_end = draw_interpolation_line_v3(sub_cluster_positions)
-                # draw_line(line_start, line_end, color=colors[label])
-                ind_start = find_closest_point(positions, line_start)
-                ind_end = find_closest_point(positions, line_end)
+                line_start, line_end = generate_interpolation_edges(sub_cluster_positions)
+                ind_start = closest_position_index(positions, line_start)
+                ind_end = closest_position_index(positions, line_end)
+
+                line_start_pos = positions[ind_start]
+                line_start_ori = orientations[ind_start]
+                line_end_pos = positions[ind_end]
+                line_end_ori = orientations[ind_end]
+
+                adaptive_goal_region_data.append(
+                    np.concatenate([
+                        line_start_pos,
+                        quaternions_to_euler(line_start_ori),
+                        line_end_pos,
+                        quaternions_to_euler(line_end_ori),
+                    ])
+                )
+
                 interpolated = generate_intermediate_poses(
-                    positions[ind_start],
-                    orientations[ind_start],
-                    positions[ind_end],
-                    orientations[ind_end],
+                    line_start_pos,
+                    line_start_ori,
+                    line_end_pos,
+                    line_end_ori,
                     50,
                 )
                 for interpolated_matrix in interpolated:
                     draw_grasps(
                         [interpolated_matrix],
                         np.eye(4),
-                        color=colors[label],
+                        color=COLORS[label],
                         gripper_openings=gripper_openings_k,
                     )
 
-    l_matrices = len(matrices)
-    l_indices = len(indices)
-    if l_matrices != l_indices:
-        print(f"Lengths are not equal, {l_matrices} != {l_indices}")
-
+    # Draw Raw Grasping Poses (Default: False)
+    scatter = False
     if scatter:
         for global_index, color_index in indices:
             if color_index is None:
                 continue
-            color = colors[color_index]
+            color = COLORS[color_index]
             draw_grasps(
                 [matrices[global_index]],
                 np.eye(4),
                 color=color,
                 gripper_openings=gripper_openings_k,
             )
+
+    save_interpolation_data(adaptive_goal_region_data)
     mlab.show()
 
 
@@ -407,6 +363,4 @@ def draw_line(line_start, line_end, color=(0, 0, 0)):
     x = [line_start[0], line_end[0]]
     y = [line_start[1], line_end[1]]
     z = [line_start[2], line_end[2]]
-    mlab.plot3d(
-        x, y, z, tube_radius=0.01, color=color
-    )  # tube_radius=None for a 1D line
+    mlab.plot3d(x, y, z, tube_radius=0.01, color=color)  # tube_radius=None for a 1D line

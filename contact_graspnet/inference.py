@@ -39,7 +39,10 @@ import config_utils
 from data import regularize_pc_point_count, depth2pc, load_available_input_data
 
 from contact_grasp_estimator import GraspEstimator
+
 from visualization_interpolation import visualize_grasps, show_image
+
+# from visualization_utils import visualize_grasps, show_image
 
 
 # def coppeliasim():
@@ -144,41 +147,41 @@ def inference(
         )
 
         # Save results
-        # np.savez(
-        #     "/home/furkan/ros/noetic/repos/github.com/CardiffUniversityComputationalRobotics/cucr_robots_tests/tests_franka/test_franka_common_bringup/src/predictions_{}".format(
-        #         os.path.basename(p.replace("png", "npz").replace("npy", "npz"))
-        #     ),
-        #     pred_grasps_cam=pred_grasps_cam,
-        #     scores=scores,
-        #     contact_pts=contact_pts,
-        # )
-        # computer_name = get_computer_name()
-        # csv_file_path = (
-        #     "/home/"
-        #     + "furkan"
-        #     + "/ros/noetic/repos/github.com/CardiffUniversityComputationalRobotics/hybridplanner-goal-regions/hybridplanner_common_bringup/src/grasping_points.csv"
-        # )
-        #
-        # with open(csv_file_path, mode="w", newline="") as file:
-        #     fieldnames = ["pred_grasps_cam", "scores", "contact_pts"]
-        #     writer = csv.DictWriter(file, fieldnames=fieldnames)
-        #     writer.writeheader()
-        #     for pred, score, contact in zip(
-        #         pred_grasps_cam[-1], scores[-1], contact_pts[-1]
-        #     ):
-        #         formatted_pred = []
-        #         for pred_element in pred:
-        #             formatted_pred.append([format_number(p) for p in pred_element])
-        #         formatted_score = format_number(score)
-        #         formatted_contact = [format_number(c) for c in contact]
-        #
-        #         writer.writerow(
-        #             {
-        #                 "pred_grasps_cam": formatted_pred,
-        #                 "scores": formatted_score,
-        #                 "contact_pts": formatted_contact,
-        #             },
-        #         )
+        np.savez(
+            "/home/furkan/safa/AdaptiveGoalRegion/storage/grasping_poses/{}".format(
+                os.path.basename(p.replace("png", "npz").replace("npy", "npz"))
+            ),
+            pred_grasps_cam=pred_grasps_cam,
+            scores=scores,
+            contact_pts=contact_pts,
+        )
+        computer_name = get_computer_name()
+        csv_file_path = (
+            "/home/"
+            + "furkan"
+            + "/ros/noetic/repos/github.com/CardiffUniversityComputationalRobotics/hybridplanner-goal-regions/hybridplanner_common_bringup/src/grasping_points.csv"
+        )
+
+        with open(csv_file_path, mode="w", newline="") as file:
+            fieldnames = ["pred_grasps_cam", "scores", "contact_pts"]
+            writer = csv.DictWriter(file, fieldnames=fieldnames)
+            writer.writeheader()
+            for pred, score, contact in zip(
+                pred_grasps_cam[-1], scores[-1], contact_pts[-1]
+            ):
+                formatted_pred = []
+                for pred_element in pred:
+                    formatted_pred.append([format_number(p) for p in pred_element])
+                formatted_score = format_number(score)
+                formatted_contact = [format_number(c) for c in contact]
+
+                writer.writerow(
+                    {
+                        "pred_grasps_cam": formatted_pred,
+                        "scores": formatted_score,
+                        "contact_pts": formatted_contact,
+                    },
+                )
 
         # Visualize results
         # show_image(rgb, segmap)
@@ -200,7 +203,8 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--np_path",
-        default="test_data/franka_gazebo.npy",
+        # default="/home/furkan/safa/AdaptiveGoalRegion/storage/captures/030/data.npy",
+        default="/home/furkan/contact_graspnet/test_data/franka_gazebo.npy",
         help='Input data: npz/npy file with keys either "depth" & camera matrix "K" or just point cloud "pc" in meters. Optionally, a 2D "segmap"',
     )
     parser.add_argument(
@@ -213,7 +217,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--z_range",
-        default=[0.4, 1.2],
+        default=[0.4, 1.3],
         help="Z value threshold to crop the input point cloud",
     )
     parser.add_argument(
