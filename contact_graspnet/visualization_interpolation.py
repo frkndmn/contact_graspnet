@@ -136,7 +136,9 @@ def visualize_grasps(
 
     if plot_opencv_cam:
         plot_coordinates(
-            np.zeros(3,),
+            np.zeros(
+                3,
+            ),
             np.eye(3, 3),
         )
 
@@ -144,7 +146,9 @@ def visualize_grasps(
     # Adaptive Goal Region
     #
 
-    positions, orientations, matrices = grasping_poses_to_position_and_orientation(pred_grasps_cam)
+    positions, orientations, matrices = grasping_poses_to_position_and_orientation(
+        pred_grasps_cam
+    )
 
     # Cluster by Position
     labels = cluster_by_position(positions)
@@ -152,7 +156,9 @@ def visualize_grasps(
     print(f"Estimated number of clusters: {n_clusters}")
 
     # Cluster by Orientation and Generate Unique Labels
-    indices, global_labels = generate_indices_array(labels, n_clusters, positions, orientations)
+    indices, global_labels = generate_indices_array(
+        labels, n_clusters, positions, orientations
+    )
 
     # Draw Spline
     adaptive_goal_region_data = []
@@ -160,13 +166,17 @@ def visualize_grasps(
     for parent_cluster in global_labels:
         for sub_cluster in global_labels[parent_cluster]:
             label = global_labels[parent_cluster][sub_cluster]
-            sub_cluster_positions = np.array([
-                positions[matrices_index]
-                for matrices_index, global_label in indices
-                if global_label == label
-            ])
+            sub_cluster_positions = np.array(
+                [
+                    positions[matrices_index]
+                    for matrices_index, global_label in indices
+                    if global_label == label
+                ]
+            )
             if np.any(sub_cluster_positions):
-                line_start, line_end = generate_interpolation_edges(sub_cluster_positions)
+                line_start, line_end = generate_interpolation_edges(
+                    sub_cluster_positions
+                )
                 ind_start = closest_position_index(positions, line_start)
                 ind_end = closest_position_index(positions, line_end)
 
@@ -176,12 +186,16 @@ def visualize_grasps(
                 line_end_ori = orientations[ind_end]
 
                 adaptive_goal_region_data.append(
-                    np.concatenate([
-                        line_start_pos,
-                        quaternions_to_euler(line_start_ori),
-                        line_end_pos,
-                        quaternions_to_euler(line_end_ori),
-                    ])
+                    np.concatenate(
+                        [
+                            line_start_pos,
+                            line_start_ori,
+                            # quaternions_to_euler(line_start_ori),
+                            line_end_pos,
+                            line_end_ori,
+                            # quaternions_to_euler(line_end_ori),
+                        ]
+                    )
                 )
 
                 interpolated = generate_intermediate_poses(
@@ -363,4 +377,6 @@ def draw_line(line_start, line_end, color=(0, 0, 0)):
     x = [line_start[0], line_end[0]]
     y = [line_start[1], line_end[1]]
     z = [line_start[2], line_end[2]]
-    mlab.plot3d(x, y, z, tube_radius=0.01, color=color)  # tube_radius=None for a 1D line
+    mlab.plot3d(
+        x, y, z, tube_radius=0.01, color=color
+    )  # tube_radius=None for a 1D line

@@ -40,9 +40,9 @@ from data import regularize_pc_point_count, depth2pc, load_available_input_data
 
 from contact_grasp_estimator import GraspEstimator
 
-from visualization_interpolation import visualize_grasps, show_image
+# from visualization_interpolation import visualize_grasps, show_image
 
-# from visualization_utils import visualize_grasps, show_image
+from visualization_utils import visualize_grasps, show_image
 
 
 # def coppeliasim():
@@ -203,8 +203,8 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--np_path",
-        # default="/home/furkan/safa/AdaptiveGoalRegion/storage/captures/030/data.npy",
-        default="/home/furkan/contact_graspnet/test_data/franka_gazebo.npy",
+        default="/home/furkan/safa/AdaptiveGoalRegion/storage/captures/034/data.npy",
+        # default="/home/furkan/contact_graspnet/test_data/franka_gazebo.npy",
         help='Input data: npz/npy file with keys either "depth" & camera matrix "K" or just point cloud "pc" in meters. Optionally, a 2D "segmap"',
     )
     parser.add_argument(
